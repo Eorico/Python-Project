@@ -13,7 +13,7 @@ class MAIN(QtWidgets.QMainWindow):
         super(MAIN, self).__init__()
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
-        self.setWindowIcon(QIcon("Logo.png"))
+        self.setWindowIcon(QIcon("public/assets/Logo.png"))
         
         self.connect_buttons()
         

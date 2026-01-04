@@ -1,8 +1,8 @@
 from PyQt5 import QtWidgets
 from Gonzales_UI_Code import Ui_MainWindow   
-from PyQt5.QtGui import QMovie
+from PyQt5.QtGui import QMovie, QPixmap, QTransform
 from PyQt5.QtWidgets import QMessageBox, QTableWidgetItem
-from PyQt5.QtCore import QTimer
+from PyQt5.QtCore import QTimer, QRect, Qt
 from statistics import mean, median
 import datetime, random, math
 from abc import ABC,abstractmethod
@@ -72,81 +72,156 @@ class Timer:
     def _stop(self):
         self.timer.stop()
         
+class SpriteAnimation:
+    def __init__(
+        self,
+        label, 
+        spritePath,
+        frameW,
+        frameH,
+        frameCount,
+        fps,
+        loop,
+        flip
+        ):
+        
+        self.label = label
+        self.sprite = QPixmap(spritePath)
+        self.frameW = frameW
+        self.frameH = frameH
+        self.frameCount = frameCount
+        self.loop = loop
+        self.currentFrame = 0
+        self.flip = flip
+        
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.nextFrame)
+        self.timer.setInterval(int(1000/fps))
+        
+    def startAnim(self):
+        self.currentFrame = 0
+        self.timer.start()
+        
+    def stopAnim(self):
+        self.timer.stop()
+        
+    def nextFrame(self):
+        if self.currentFrame >= self.frameCount:
+            if self.loop:
+                self.currentFrame = 0
+            else:
+                self.stopAnim()
+                
+        x = self.currentFrame * self.frameW
+        frame = self.sprite.copy(
+            QRect(x, 0, self.frameW, self.frameH)
+        )
+        
+        if self.flip:
+            frame = frame.transformed(QTransform().scale(-1, 1))
+
+        scale = 3
+        frame = frame.scaled(
+            self.frameW * scale,
+            self.frameH * scale,
+            Qt.IgnoreAspectRatio,
+            Qt.FastTransformation,
+        )
+        
+        self.label.setPixmap(frame)
+        self.currentFrame +=1
+        
 class Animation:
     def __init__(self, ui: Ui_MainWindow):
         self.ui = ui
-         # this one is for animation 
-        self.Character1 = QMovie("actions/default1.gif")
-        self.Character2 = QMovie("actions/default2.gif")
         
-        self.attack1 = QMovie("actions/attack1.gif")
-        self.attack2 = QMovie("actions/attack2.gif")
+        self.knightIdle = SpriteAnimation(
+            self.ui.character1, "public/sprites/knight/idle (48 x 48).png",
+            48, 48,
+            4, 5, True, False
+        )
         
-        self.hurt1 = QMovie("actions/hurt1.gif")
-        self.hurt2 = QMovie("actions/hurt2.gif")
+        self.hollyIdle = SpriteAnimation(
+            self.ui.character2, "public/sprites/holly/idle (32 x 32).png",
+            32, 32,
+            9, 5, True, True
+        )
         
-        self.dead1 = QMovie("actions/dead1.gif")
-        self.dead2 = QMovie("actions/dead2.gif")
-
-        self.ui.character1.setMovie(self.Character1)
-        self.ui.character2.setMovie(self.Character2)
-
-        self.Character1.start()
-        self.Character2.start()
+        self.knightAttack = SpriteAnimation(
+            self.ui.character1, "public/sprites/knight/Combo_swings (80 x 64).png",
+            64, 120,
+            18, 3, False, False
+        )
         
-    def defaulAnimation(self, character):
+        self.hollyAttack = SpriteAnimation(
+            self.ui.character2, "public/sprites/holly/Aerial_swing (64 x 64).png",
+            64, 120,
+            12, 3, False, True
+        )
         
-        if character == 1:
-            self.ui.character1.setMovie(self.Character1)
-            self.Character1.start()
-        else:
-            self.ui.character2.setMovie(self.Character2)
-            self.Character2.start()
-
-    def AttackAnimation(self, character):
-         
-        if character == 1:
-            self.attack1.setSpeed(100)  # 2x speed
-            self.ui.character1.setMovie(self.attack1)
-            self.attack1.start()
+        self.knightHurt = SpriteAnimation(
+            self.ui.character1, "public/sprites/knight/Hurt (48 x 48).png",
+            48, 48,
+            12, 5, False, False
+        )
+        
+        self.hollyHurt = SpriteAnimation(
+            self.ui.character2, "public/sprites/holly/Hurt (32 x 32).png",
+            32, 32,
+            18, 5, False, True
+        )
+        
+        self.knightRun = SpriteAnimation(
+            self.ui.character1, "public/sprites/knight/Running (48 x 48).png",
+            48, 48,
+            6, 5, False, False
+        )
+        
+        self.hollyRun = SpriteAnimation(
+            self.ui.character2, "public/sprites/holly/Running (32 x 32).png",
+            32, 32,
+            6, 5, False, True
+        )
+        
+        self.knightIdle.startAnim()
+        self.hollyIdle.startAnim()
+        
+    def idleAnim(self, char):
+        if char == 1:
+            self.knightIdle.startAnim()
+        elif char == 2:
+            self.hollyIdle.startAnim()
             
-            # Force stop after fixed short duration (adjust 400ms as needed)
-            QTimer.singleShot(500, lambda: [
-                self.attack1.stop(),
-                self.defaulAnimation(1)
-            ])
-        else:
-            self.attack2.setSpeed(100)  # 2x speed
-            self.ui.character2.setMovie(self.attack2)
-            self.attack2.start()
+    def attackAnim(self, char):
+        if char == 1:
+            QTimer.singleShot(2000, lambda: self.knightIdle.stopAnim())
+            self.knightAttack.startAnim()
+            QTimer.singleShot(2000, lambda: self.idleAnim(1))
+        elif char == 2:
+            QTimer.singleShot(2000, lambda: self.hollyIdle.stopAnim())
+            self.hollyAttack.startAnim()
+            QTimer.singleShot(2000, lambda: self.idleAnim(2))
             
-            QTimer.singleShot(500, lambda: [
-                self.attack2.stop(),
-                self.defaulAnimation(2)
-            ])
-
-    def HurtAnimation(self, character):
-        
-        if character == 1:
-            self.hurt1.setSpeed(100)  # Faster than attack
-            self.ui.character1.setMovie(self.hurt1)
-            self.hurt1.start()
+    def hurtAnim(self, char):
+        if char == 1:
+            self.knightIdle.stopAnim()
+            self.knightHurt.startAnim()
+            QTimer.singleShot(600, lambda: self.idleAnim(1))
+        elif char == 2:
+            self.hollyIdle.stopAnim()
+            self.hollyHurt.startAnim()
+            QTimer.singleShot(600, lambda: self.idleAnim(2))
             
-            # Force stop after fixed short duration (adjust 300ms as needed)
-            QTimer.singleShot(500, lambda: [
-                self.hurt1.stop(),
-                self.defaulAnimation(1)
-            ])
-        else:
-            self.hurt2.setSpeed(100)  # Faster than attack
-            self.ui.character2.setMovie(self.hurt2)
-            self.hurt2.start()
+    def runAnim(self, char):
+        if char == 1:
+            self.knightIdle.stopAnim()
+            self.knightRun.startAnim()
+            QTimer.singleShot(600, lambda: self.idleAnim(1))
+        elif char == 2:
+            self.hollyIdle.stopAnim()
+            self.hollyRun.startAnim()
+            QTimer.singleShot(600, lambda: self.idleAnim(2))      
             
-            QTimer.singleShot(500, lambda: [
-                self.hurt2.stop(),
-                self.defaulAnimation(2)
-            ])
-                 
 # this class is responsible sa pag create ng mga question at mga operation na gagawin sa mga question 
 class QuestionBase(ABC):
     @abstractmethod
@@ -630,9 +705,7 @@ class PlayerOneUpdate(GameUpdate):
                 
                 QMessageBox.information(self.parent, "Player Eliminated",
                                     "Player 1 is out! Player 2 continues.")
-                self.tools.animation.Character1.stop()
-                self.tools.animation.hurt1.stop()
-                self.tools.animation.attack1.stop()
+                 
                 return
             else:
                
@@ -679,9 +752,7 @@ class PlayerTwoUpdate(GameUpdate):
             if other_alive:
                 QMessageBox.information(self.parent, "Player Eliminated",
                                     "Player 2 is out! Player 1 continues.")
-                self.tools.animation.Character2.stop()
-                self.tools.animation.hurt2.stop()
-                self.tools.animation.attack2.stop()
+                 
                 return
             else:
                 self.tools.ui.Le1_2.setDisabled(True)   
@@ -816,8 +887,8 @@ class PlayerOneGameChecking(GameChecking):
                 self.tools.status_handler.score += 1
                 self.tools.status_handler.sStreak += 1
                 self.tools.ui.lineEdit_11.setText("YOU ARE CORRECT!")
-                self.tools.animation.AttackAnimation(1)
-                QTimer.singleShot(200, lambda: self.tools.animation.HurtAnimation(2))
+                self.tools.animation.attackAnim(1)
+                QTimer.singleShot(200, lambda: self.tools.animation.hurtAnim(2))
                 if self.tools.status_handler.sStreak % 5 == 0 and self.tools.status_handler.sStreak > 0:
                     self.tools.status_handler.score += 3
                     self.tools.ui.lineEdit_11.setText("🔥 COMBO BONUS! EXTRA POINT!")
@@ -825,9 +896,9 @@ class PlayerOneGameChecking(GameChecking):
                 self.tools.status_handler.hearts -= 1 
                 self.tools.status_handler.streak = 0
                 self.tools.status_handler.mistakes += 1
-                self.tools.animation.AttackAnimation(2)
+                self.tools.animation.attackAnim(2)
                 self.tools.ui.lineEdit_11.setText(f"YOU ARE WRONG. THE ANSWER IS {self.tools.status_handler.correct}")
-                QTimer.singleShot(200, lambda: self.tools.animation.HurtAnimation(1))
+                QTimer.singleShot(200, lambda: self.tools.animation.hurtAnim(1))
 
             self.tools.ui.Le1_2.setFocus()
 
@@ -879,9 +950,9 @@ class PlayerTwoGameChecking(GameChecking):
             if playerTwoAnswer == self.tools.status_handler.correct:
                 self.tools.status_handler.score += 1
                 self.tools.status_handler.sStreak += 1
-                self.tools.animation.AttackAnimation(2)
+                self.tools.animation.attackAnim(2)
                 self.tools.ui.lineEdit_12.setText("YOU ARE CORRECT!")
-                QTimer.singleShot(200, lambda: self.tools.animation.HurtAnimation(1))
+                QTimer.singleShot(200, lambda: self.tools.animation.hurtAnim(1))
                 if self.tools.status_handler.sStreak % 4 == 0 and self.tools.status_handler.sStreak > 0:
                     self.tools.status_handler.hearts += 2
                     self.tools.ui.Heart_4.setText(str(self.tools.status_handler.hearts)) 
@@ -890,9 +961,9 @@ class PlayerTwoGameChecking(GameChecking):
                 self.tools.status_handler.hearts -= 1 
                 self.tools.status_handler.streak = 0
                 self.tools.status_handler.mistakes += 1
-                self.tools.animation.AttackAnimation(1)
+                self.tools.animation.attackAnim(1)
                 self.tools.ui.lineEdit_12.setText(f"YOU ARE WRONG. THE ANSWER IS {self.tools.status_handler.correct}")
-                QTimer.singleShot(200, lambda: self.tools.animation.HurtAnimation(2))
+                QTimer.singleShot(200, lambda: self.tools.animation.hurtAnim(2))
             
             self.tools.ui.Le1_3.setFocus()
 
