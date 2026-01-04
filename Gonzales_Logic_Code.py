@@ -150,25 +150,25 @@ class Animation:
         self.knightAttack = SpriteAnimation(
             self.ui.character1, "public/sprites/knight/Combo_swings (80 x 64).png",
             64, 120,
-            18, 3, False, False
+            2, 3, False, False
         )
         
         self.hollyAttack = SpriteAnimation(
             self.ui.character2, "public/sprites/holly/Aerial_swing (64 x 64).png",
             64, 120,
-            12, 3, False, True
+            2, 3, False, True
         )
         
         self.knightHurt = SpriteAnimation(
             self.ui.character1, "public/sprites/knight/Hurt (48 x 48).png",
             48, 48,
-            12, 5, False, False
+            2, 5, False, False
         )
         
         self.hollyHurt = SpriteAnimation(
             self.ui.character2, "public/sprites/holly/Hurt (32 x 32).png",
             32, 32,
-            18, 5, False, True
+            2, 5, False, True
         )
         
         self.knightRun = SpriteAnimation(
@@ -193,12 +193,12 @@ class Animation:
             self.hollyIdle.startAnim()
             
     def attackAnim(self, char):
+        self.hollyIdle.stopAnim()
+        self.knightIdle.stopAnim()
         if char == 1:
-            QTimer.singleShot(2000, lambda: self.knightIdle.stopAnim())
             self.knightAttack.startAnim()
             QTimer.singleShot(2000, lambda: self.idleAnim(1))
         elif char == 2:
-            QTimer.singleShot(2000, lambda: self.hollyIdle.stopAnim())
             self.hollyAttack.startAnim()
             QTimer.singleShot(2000, lambda: self.idleAnim(2))
             
